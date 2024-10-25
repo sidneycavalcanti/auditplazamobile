@@ -1,0 +1,6 @@
+Tecnologias e Bibliotecas
+React Navigation: Para navegação no app.
+Axios: Para chamadas à API.
+Zustand: Para gerenciar estado global de forma leve.
+Styled Components: Para estilização com mais controle.
+TypeScript (opcional): Para tipagem e segurança de código.
