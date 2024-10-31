@@ -1,56 +1,84 @@
-// LoginScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Button } from '@react-native-material/core';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { Button, Surface, IconButton } from '@react-native-material/core';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
 
 const HomeScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const navigation = useNavigation();
+  const [searchText, setSearchText] = useState('');
+  const [auditorias, setAuditorias] = useState([]);
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert("Por favor, preencha todos os campos");
-      return;
-    }
-    // Lógica de autenticação simulada
-    Alert.alert('Login efetuado com sucesso!');
-    navigation.navigate('Home');
+  useEffect(() => {
+    // Função para buscar as auditorias da API
+    const fetchAuditorias = async () => {
+      try {
+        const response = await axios.get('http://192.168.10.108:5000/auditoria');
+        setAuditorias(response.data.auditoria);
+      } catch (error) {
+        console.error('Erro ao buscar auditorias:', error);
+      }
+    };
+
+    fetchAuditorias();
+  }, []);
+
+  const handleSearch = () => {
+    console.log('Buscando auditorias por:', searchText);
   };
+
+  const handleIniciarAuditoria = (id) => {
+    navigation.navigate('RegistroAuditoria', { auditoriaId: id });
+  };
+
+  const renderAuditoria = ({ item }) => (
+    <Surface style={styles.auditoriaItem} elevation={2}>
+      <Text style={styles.auditoriaText}><Text style={styles.label}>Loja:</Text> {item.loja.name}</Text>
+      <Text style={styles.auditoriaText}><Text style={styles.label}>Data:</Text> {new Date(item.data).toLocaleDateString()}</Text>
+      <Text style={styles.auditoriaText}><Text style={styles.label}>Fluxo Especulador:</Text> {item.fluxoespeculador}</Text>
+      <Text style={styles.auditoriaText}><Text style={styles.label}>Status:</Text> {item.status || 'Indisponível'}</Text>
+      <TouchableOpacity
+        style={styles.iniciarButton}
+        onPress={() => handleIniciarAuditoria(item.id)}
+      >
+        <Text style={styles.iniciarButtonText}>Iniciar Auditoria</Text>
+      </TouchableOpacity>
+    </Surface>
+  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bem-vindo</Text>
-      <Text style={styles.subtitle}>Faça login para continuar</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Auditorias</Text>
+        <IconButton
+          icon="account-circle"
+          color="#66CDAA"
+          onPress={() => navigation.navigate('Perfil')}
+        />
+      </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        placeholderTextColor="#aaa"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Pesquisar auditorias..."
+          placeholderTextColor="#aaa"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
+        <Button
+          title="Buscar"
+          onPress={handleSearch}
+          style={styles.searchButton}
+          color="#66CDAA"
+        />
+      </View>
+
+      <FlatList
+        data={auditorias}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderAuditoria}
+        contentContainerStyle={styles.listContainer}
       />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <Button
-        title="Entrar"
-        onPress={handleLogin}
-        style={styles.button}
-      />
-
-      <TouchableOpacity style={styles.registerButton} onPress={() => Alert.alert('Função de Registro')}>
-        <Text style={styles.registerText}>Não tem uma conta? Cadastre-se</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -59,44 +87,71 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingTop: 40,
+  },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  input: {
-    width: '100%',
+  searchInput: {
+    flex: 1,
     height: 50,
     borderRadius: 8,
     paddingHorizontal: 16,
     backgroundColor: '#f1f1f1',
-    marginBottom: 16,
     fontSize: 16,
+    marginRight: 8,
   },
-  button: {
-    width: '100%',
+  searchButton: {
     height: 50,
-    borderRadius: 8,
     justifyContent: 'center',
-    marginTop: 16,
   },
-  registerButton: {
-    marginTop: 16,
+  listContainer: {
+    paddingBottom: 20,
   },
-  registerText: {
+  auditoriaItem: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  auditoriaText: {
+    fontSize: 16,
     color: '#333',
+    marginBottom: 4,
+  },
+  label: {
+    fontWeight: 'bold',
+  },
+  iniciarButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#66CDAA',
+    borderRadius: 4,
+  },
+  iniciarButtonText: {
+    color: '#fff',
     fontSize: 14,
-    textDecorationLine: 'underline',
+    fontWeight: 'bold',
   },
 });
 

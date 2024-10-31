@@ -1,5 +1,5 @@
 // LoginScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { Button } from '@react-native-material/core';
 import { useNavigation } from '@react-navigation/native';
@@ -22,7 +22,7 @@ const LoginScreen = () => {
   return (
     <View style={styles.container}>
       <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Auditoria Plaza</Text>
+      <Text style={styles.title}>Auditoria Plaza </Text>
       <Text style={styles.subtitle}>Faça login para continuar</Text>
 
       <TextInput 
