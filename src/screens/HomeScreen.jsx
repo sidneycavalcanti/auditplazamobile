@@ -1,55 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { Button, Surface, IconButton } from '@react-native-material/core';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
+import useAuditorias from '../hooks/useAuditorias.js';
+import { isSameDate } from '../utils/dateUtils.js';
+import globalStyles from '../styles/globalStyles.js';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const [searchText, setSearchText] = useState('');
-  const [auditorias, setAuditorias] = useState([]);
+  const [searchDate, setSearchDate] = useState('');
+  const auditorias = useAuditorias();
 
-  useEffect(() => {
-    // Função para buscar as auditorias da API
-    const fetchAuditorias = async () => {
-      try {
-        const response = await axios.get('http://192.168.10.108:5000/auditoria');
-        setAuditorias(response.data.auditoria);
-      } catch (error) {
-        console.error('Erro ao buscar auditorias:', error);
-      }
-    };
-
-    fetchAuditorias();
-  }, []);
-
-  const handleSearch = () => {
-    console.log('Buscando auditorias por:', searchText);
+  const handleSearch = (text) => {
+    setSearchText(text);
   };
+
+  const handleSearchDate = (text) => {
+    setSearchDate(text);
+  };
+
+  // Filter and sort auditorias
+  const filteredAuditorias = auditorias
+    .filter((auditoria) => {
+      const searchLower = searchText.toLowerCase();
+      const dataCadastro = new Date(auditoria.data).toLocaleDateString();
+      
+      const matchesName = auditoria.loja.name.toLowerCase().includes(searchLower);
+      const matchesDate = searchDate ? dataCadastro === searchDate : true;
+      
+      return matchesName && matchesDate;
+    })
+    .sort((a, b) => {
+      const isDisponivelA = isSameDate(new Date(), new Date(a.data));
+      const isDisponivelB = isSameDate(new Date(), new Date(b.data));
+      
+      // Order "disponível" items at the top
+      if (isDisponivelA && !isDisponivelB) return -1;
+      if (!isDisponivelA && isDisponivelB) return 1;
+      return 0;
+    });
 
   const handleIniciarAuditoria = (id) => {
-    navigation.navigate('RegistroAuditoria', { auditoriaId: id });
+    navigation.navigate('Auditoria', { auditoriaId: id });
   };
 
-  const renderAuditoria = ({ item }) => (
-    <Surface style={styles.auditoriaItem} elevation={2}>
-      <Text style={styles.auditoriaText}><Text style={styles.label}>Loja:</Text> {item.loja.name}</Text>
-      <Text style={styles.auditoriaText}><Text style={styles.label}>Data:</Text> {new Date(item.data).toLocaleDateString()}</Text>
-      <Text style={styles.auditoriaText}><Text style={styles.label}>Fluxo Especulador:</Text> {item.fluxoespeculador}</Text>
-      <Text style={styles.auditoriaText}><Text style={styles.label}>Status:</Text> {item.status || 'Indisponível'}</Text>
-      <TouchableOpacity
-        style={styles.iniciarButton}
-        onPress={() => handleIniciarAuditoria(item.id)}
-      >
-        <Text style={styles.iniciarButtonText}>Iniciar Auditoria</Text>
-      </TouchableOpacity>
-    </Surface>
-  );
+  const renderAuditoria = ({ item }) => {
+    const dataAtual = new Date();
+    const dataCadastro = new Date(item.data);
+
+    // Check if the audit is available today
+    const isDisponivel = isSameDate(dataAtual, dataCadastro);
+
+    return (
+      <Surface style={globalStyles.auditoriaItem} elevation={2}>
+        <Text style={globalStyles.auditoriaText}>
+          <Text style={globalStyles.label}>Loja:</Text> {item.loja.name}
+        </Text>
+        <Text style={globalStyles.auditoriaText}>
+          <Text style={globalStyles.label}>Data:</Text> {new Date(item.data).toLocaleDateString()}
+        </Text>
+        <Text style={globalStyles.auditoriaText}>
+          <Text style={globalStyles.label}>Status:</Text> {isDisponivel ? 'Disponível' : 'Indisponível'}
+        </Text>
+        <TouchableOpacity
+          style={[globalStyles.iniciarButton, isDisponivel ? { backgroundColor: '#66CDAA' } : { backgroundColor: '#d3d3d3' }]}
+          onPress={() => handleIniciarAuditoria(item.id)}
+          disabled={!isDisponivel}
+        >
+          <Text style={globalStyles.iniciarButtonText}>Iniciar Auditoria</Text>
+        </TouchableOpacity>
+      </Surface>
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Auditorias</Text>
+    <View style={globalStyles.container}>
+      <View style={globalStyles.header}>
+        <Text style={globalStyles.title}>Auditorias</Text>
         <IconButton
           icon="account-circle"
           color="#66CDAA"
@@ -57,102 +85,37 @@ const HomeScreen = () => {
         />
       </View>
 
-      <View style={styles.searchContainer}>
+      <View style={globalStyles.searchContainer}>
         <TextInput
-          style={styles.searchInput}
-          placeholder="Pesquisar auditorias..."
+          style={globalStyles.searchInput}
+          placeholder="Pesquisar por nome da loja..."
           placeholderTextColor="#aaa"
           value={searchText}
-          onChangeText={setSearchText}
+          onChangeText={handleSearch}
+        />
+        <TextInput
+          style={globalStyles.searchInput}
+          placeholder="Pesquisar por data (DD/MM/AAAA)"
+          placeholderTextColor="#aaa"
+          value={searchDate}
+          onChangeText={handleSearchDate}
         />
         <Button
           title="Buscar"
-          onPress={handleSearch}
-          style={styles.searchButton}
+          onPress={() => handleSearch(searchText)}
+          style={globalStyles.searchButton}
           color="#66CDAA"
         />
       </View>
 
       <FlatList
-        data={auditorias}
+        data={filteredAuditorias}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderAuditoria}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={globalStyles.listContainer}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  searchInput: {
-    flex: 1,
-    height: 50,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#f1f1f1',
-    fontSize: 16,
-    marginRight: 8,
-  },
-  searchButton: {
-    height: 50,
-    justifyContent: 'center',
-  },
-  listContainer: {
-    paddingBottom: 20,
-  },
-  auditoriaItem: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  auditoriaText: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 4,
-  },
-  label: {
-    fontWeight: 'bold',
-  },
-  iniciarButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#66CDAA',
-    borderRadius: 4,
-  },
-  iniciarButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-});
 
 export default HomeScreen;

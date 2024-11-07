@@ -1,40 +1,52 @@
 // LoginScreen.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { Button } from '@react-native-material/core';
 import { useNavigation } from '@react-navigation/native';
+import loginStyles from './loginStyle.js';
+import useAuth from '../../hooks/useAuth.js';
 
 const LoginScreen = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const navigation = useNavigation();
+  const { login, loading, error } = useAuth();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    navigation.navigate('Home');
     if (!name || !password) {
       Alert.alert("Por favor, preencha todos os campos");
       return;
     }
-    // Lógica de autenticação simulada
-    Alert.alert('Login efetuado com sucesso!');
-    navigation.navigate('Home');
+
+    const result = await login(name, password);
+
+    if (result.success) {
+      Alert.alert('Login efetuado com sucesso!');
+      //navigation.navigate('Home');
+    } else {
+      Alert.alert(result.error || 'Erro ao efetuar login');
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Auditoria Plaza </Text>
-      <Text style={styles.subtitle}>Faça login para continuar</Text>
+    <View style={loginStyles.container}>
+      <Image source={require('../../assets/images/logo.png')} style={loginStyles.logo} />
+      <Text style={loginStyles.title}>Auditoria Plaza</Text>
+      <Text style={loginStyles.subtitle}>Faça login para continuar</Text>
 
-      <TextInput 
-        style={styles.input}
+      <TextInput
+        style={loginStyles.input}
         placeholder="Nome"
         placeholderTextColor="#aaa"
         value={name}
         onChangeText={setName}
+        textContentType="username"
+        selectTextOnFocus
       />
 
       <TextInput
-        style={styles.input}
+        style={loginStyles.input}
         placeholder="Senha"
         placeholderTextColor="#aaa"
         secureTextEntry
@@ -42,68 +54,23 @@ const LoginScreen = () => {
         onChangeText={setPassword}
       />
 
-      <Button
-        title="Entrar"
-        onPress={handleLogin}
-        style={styles.button}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#66CDAA" style={loginStyles.loadingIndicator} />
+      ) : (
+        <Button
+          title="Entrar"
+          onPress={handleLogin}
+          style={loginStyles.button}
+        />
+      )}
 
-      <TouchableOpacity style={styles.registerButton} onPress={() => Alert.alert('Função de Registro')}>
-        <Text style={styles.registerText}>Não tem uma conta? Cadastre-se</Text>
+      {error && <Text style={loginStyles.errorText}>{error}</Text>}
+
+      <TouchableOpacity style={loginStyles.registerButton} onPress={() => Alert.alert('Função de Registro')}>
+        <Text style={loginStyles.registerText}>Não tem uma conta? Cadastre-se</Text>
       </TouchableOpacity>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  logo: {
-    width: 120, // ajuste a largura conforme necessário
-    height: 110, // ajuste a altura conforme necessário
-    marginBottom: 20, // espaço entre a logo e o título
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#f1f1f1',
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  button: {
-    width: '100%',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    marginTop: 16,
-    backgroundColor: '#66CDAA',
-  },
-  registerButton: {
-    marginTop: 16,
-  },
-  registerText: {
-    color: '#333',
-    fontSize: 14,
-    textDecorationLine: 'underline',
-  },
-});
 
 export default LoginScreen;
